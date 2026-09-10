@@ -1,4 +1,4 @@
-const { buildIdentifier, buildReference, buildName, buildAddress, buildTelecom } = require("../../utils/fhirHelpers");
+const { buildIdentifier, buildMetaProfile, buildReference } = require("../../utils/fhirHelpers");
 const { resolveFhirId } = require("./resolver");
 
 async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
@@ -7,15 +7,92 @@ async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
   if (genderRaw.startsWith("m")) gender = "male";
   else if (genderRaw.startsWith("f")) gender = "female";
 
+  const nameObj = {
+    family: data.last_name || undefined,
+    given: data.first_name ? [data.first_name] : undefined,
+    suffix: data.suffix ? [data.suffix] : undefined,
+  };
+  if (data.middle_name) {
+    if (!nameObj.given) nameObj.given = [];
+    nameObj.given.push(data.middle_name);
+  }
+
+  const names = [nameObj];
+  if (data.previous_name) {
+    names.push({
+      use: "old",
+      family: data.previous_name,
+    });
+  }
+
+  const addressLine = data.address_line1 || data.address;
+  const addressLines = addressLine ? (data.address_line2 ? [addressLine, data.address_line2] : [addressLine]) : undefined;
+
+  let telecom = [];
+  if (data.email) telecom.push({ system: "email", value: data.email, use: data.email_use });
+  if (data.phone) telecom.push({ system: "phone", value: data.phone, use: data.phone_use });
+  if (telecom.length === 0) telecom = undefined;
+
+  const extensions = [];
+  if (data.race) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+      extension: [{ url: "ombCategory", valueCoding: { system: "urn:oid:2.16.840.1.113883.6.238", code: data.race } }]
+    });
+  }
+  if (data.ethnicity) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+      extension: [{ url: "ombCategory", valueCoding: { system: "urn:oid:2.16.840.1.113883.6.238", code: data.ethnicity } }]
+    });
+  }
+  if (data.birthsex) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+      valueCode: data.birthsex
+    });
+  }
+  if (data.genderIdentity) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-genderIdentity",
+      valueCodeableConcept: { coding: [{ system: "http://snomed.info/sct", code: data.genderIdentity }] }
+    });
+  }
+  if (data.sex) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-sex",
+      valueCodeableConcept: { coding: [{ system: "http://snomed.info/sct", code: data.sex }] }
+    });
+  }
+  if (data.tribalAffiliation) {
+    extensions.push({
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-tribal-affiliation",
+      extension: [{ url: "tribalAffiliation", valueCodeableConcept: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v3-TribalEntityUS", code: data.tribalAffiliation }] } }]
+    });
+  }
+
   return {
     resourceType: "Patient",
-    identifier: buildIdentifier(sourceSystem, "Patient", data.id),
+    meta: {
+      profile: ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+    },
+    extension: extensions.length > 0 ? extensions : undefined,
+    identifier: buildIdentifier(sourceSystem, "Patient", data.id || data.sourceId),
     active: data.active !== undefined ? data.active : true,
-    name: buildName(data.first_name, data.last_name),
+    name: names,
     gender: gender,
-    address: buildAddress(data.address, undefined, undefined, undefined, undefined),
+    address: [
+      {
+        use: data.address_use || undefined,
+        line: addressLines,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        postalCode: data.postalCode || undefined,
+        country: data.country || undefined,
+      }
+    ],
     birthDate: data.dob ? new Date(data.dob).toISOString().split("T")[0] : undefined,
-    telecom: buildTelecom(data.email),
+    telecom: telecom,
     deceasedBoolean: data.deceasedBoolean !== undefined ? data.deceasedBoolean : undefined,
     deceasedDateTime: data.deceasedDateTime !== undefined ? data.deceasedDateTime : undefined,
     multipleBirthInteger:
@@ -24,27 +101,27 @@ async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
         : undefined,
     multipleBirthBoolean:
       (data.multipleBirthInteger === undefined || data.multipleBirthInteger === null) &&
-      data.multipleBirthBoolean !== undefined
+        data.multipleBirthBoolean !== undefined
         ? data.multipleBirthBoolean
         : undefined,
     communication:
       data.language !== undefined || data.preferred !== undefined
         ? [
-            {
-              language:
-                data.language !== undefined
-                  ? {
-                      coding: [
-                        {
-                          system: "urn:ietf:bcp:47",
-                          code: data.language,
-                        },
-                      ],
-                    }
-                  : undefined,
-              preferred: data.preferred !== undefined ? data.preferred : undefined,
-            },
-          ]
+          {
+            language:
+              data.language !== undefined
+                ? {
+                  coding: [
+                    {
+                      system: "urn:ietf:bcp:47",
+                      code: data.language,
+                    },
+                  ],
+                }
+                : undefined,
+            preferred: data.preferred !== undefined ? data.preferred : undefined,
+          },
+        ]
         : undefined,
     managingOrganization: buildReference(
       "Organization",
@@ -52,14 +129,14 @@ async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
     ),
     link: data.related?.patientId
       ? [
-          {
-            other: buildReference(
-              "Patient",
-              await resolveFhirId(db, tenantId, sourceSystem, "Patient", data.related.patientId),
-            ),
-            type: data.related.type || "seealso",
-          },
-        ]
+        {
+          other: buildReference(
+            "Patient",
+            await resolveFhirId(db, tenantId, sourceSystem, "Patient", data.related.patientId),
+          ),
+          type: data.related.type || "seealso",
+        },
+      ]
       : undefined,
   };
 }

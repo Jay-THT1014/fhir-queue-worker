@@ -1,7 +1,6 @@
 jest.mock("bullmq");
 jest.mock("../config/db", () => ({ query: jest.fn() }));
 jest.mock("../services/ehrFetcherService");
-jest.mock("../services/validatorService");
 jest.mock("../services/medplumService", () => ({
   authenticateMedplum: jest.fn().mockResolvedValue(),
   upsertResource: jest.fn(),

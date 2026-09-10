@@ -10,6 +10,14 @@ function buildIdentifier(sourceSystem, resourceType, id) {
   ];
 }
 
+function buildMetaProfile(meta) {
+  return {
+    profile: [
+      meta
+    ]
+  };
+}
+
 function buildReference(resourceType, id) {
   return id ? { reference: `${resourceType}/${id}` } : undefined;
 }
@@ -47,4 +55,5 @@ module.exports = {
   buildName,
   buildAddress,
   buildTelecom,
+  buildMetaProfile,
 };
