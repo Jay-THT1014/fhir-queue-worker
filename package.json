@@ -1,0 +1,78 @@
+{
+  "name": "tiaassetbackend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "test": "jest",
+    "test:unit": "jest tests/unit --runInBand",
+    "test:integration": "jest tests/integration --runInBand",
+    "test:cov": "jest --coverage --runInBand"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@medplum/core": "^5.1.36",
+    "bullmq": "^6.3.4",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "ioredis": "^6.0.0",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.23.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^9.1.7",
+    "jest": "^30.5.1",
+    "lint-staged": "^16.4.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.9.1",
+    "supertest": "^7.2.2"
+  },
+  "overrides": {
+    "color": "^4.2.3",
+    "color-string": "^1.9.1"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --cache --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md,html,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "controllers/**/*.js",
+      "services/**/*.js",
+      "repositories/**/*.js",
+      "utils/**/*.js",
+      "middleware/**/*.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "clover"
+    ],
+    "moduleNameMapper": {
+      "^puppeteer$": "<rootDir>/tests/__mocks__/puppeteer.js"
+    }
+  }
+}
