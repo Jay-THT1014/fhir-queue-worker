@@ -12,7 +12,6 @@ const { Worker } = require("bullmq");
 const db = require("../config/db");
 const { fetchSourceData } = require("../services/ehrFetcherService");
 const { mapToFhir } = require("../services/fhirMapper");
-const FHIRValidator = require("../services/validatorService");
 const { upsertResource } = require("../services/medplumService");
 
 describe("Queue Consumer (Worker)", () => {
@@ -31,7 +30,6 @@ describe("Queue Consumer (Worker)", () => {
   test("processes job successfully and updates DB to COMPLETED", async () => {
     fetchSourceData.mockResolvedValueOnce({ id: "123" });
     mapToFhir.mockReturnValueOnce({ resourceType: "Patient" });
-    FHIRValidator.validate.mockResolvedValueOnce();
     upsertResource.mockResolvedValueOnce({ id: "medplum-123" });
     db.query.mockResolvedValue();
 

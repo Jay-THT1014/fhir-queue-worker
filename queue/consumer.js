@@ -3,7 +3,6 @@ const logger = require("../utils/logger");
 const db = require("../config/db");
 const { fetchSourceData } = require("../services/ehrFetcherService");
 const { mapToFhir } = require("../services/fhirMapper");
-// const FHIRValidator = require("../services/validatorService");
 const { authenticateMedplum, upsertResource } = require("../services/medplumService");
 
 const QUEUE_NAME = "fhir-sync-queue";
@@ -38,9 +37,6 @@ const worker = new Worker(
 
       logger.info(`Job ${jobId}: Mapping raw data to FHIR...`);
       const mappedFhirResource = await mapToFhir(resourceType, rawData, sourceSystem, orgId, tenantId, db);
-
-      logger.info(`Job ${jobId}: Skipping local validation...`);
-      // await FHIRValidator.validate(mappedFhirResource);
 
       logger.info(`Job ${jobId}: Upserting to Medplum...`);
       const synced = await upsertResource(mappedFhirResource);

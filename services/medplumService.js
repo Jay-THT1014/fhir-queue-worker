@@ -29,6 +29,9 @@ async function authenticateMedplum() {
 
 async function upsertResource(resource) {
   try {
+    //Validate resource before upserting using Medplum $validate endpoint
+    await medplum.validateResource(resource);
+
     const identifier = resource.identifier && resource.identifier[0];
     if (!identifier) {
       throw new Error("Cannot sync resource without an identifier for idempotency");
@@ -67,7 +70,33 @@ async function upsertResource(resource) {
       return created;
     }
   } catch (error) {
+    if (error.outcome) {
+      logger.error(`Medplum Validation/Sync Error Outcome: ${JSON.stringify(error.outcome)}`);
+    }
     logger.error(`Medplum Sync Error: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Validate a code against a specific ValueSet using the Medplum $validate-code endpoint
+ * @param {string} url - The ValueSet URL to validate against
+ * @param {object} coding - The coding object to validate, e.g., { system: '...', code: '...' }
+ * @returns {Promise<object>} The Parameters resource result containing validation outcome
+ */
+async function validateCode(url, coding) {
+  try {
+    const parameters = {
+      resourceType: 'Parameters',
+      parameter: [
+        { name: 'url', valueUri: url },
+        { name: 'coding', valueCoding: coding }
+      ]
+    };
+    const result = await medplum.post('fhir/R4/ValueSet/$validate-code', parameters);
+    return result;
+  } catch (error) {
+    logger.error(`ValueSet validation error: ${error.message}`);
     throw error;
   }
 }
@@ -76,4 +105,5 @@ module.exports = {
   medplum,
   authenticateMedplum,
   upsertResource,
+  validateCode,
 };
