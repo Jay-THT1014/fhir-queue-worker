@@ -4,6 +4,9 @@ const { resolveFhirId } = require("./resolver");
 async function mapCondition(data, sourceSystem, orgId, tenantId, db) {
   const categoryCode = data.category === "problem-list-item" ? "problem-list-item" : "encounter-diagnosis";
   const categoryDisplay = data.category === "problem-list-item" ? "Problem List Item" : "Encounter Diagnosis";
+  const profileUrl = categoryCode === "problem-list-item"
+    ? "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-problems-health-concerns"
+    : "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-encounter-diagnosis";
 
   const defaultCategoryCodings = [
     {
@@ -29,7 +32,10 @@ async function mapCondition(data, sourceSystem, orgId, tenantId, db) {
 
   return {
     resourceType: "Condition",
-    identifier: buildIdentifier(sourceSystem, "Condition", data.id),
+    meta: {
+      profile: [profileUrl]
+    },
+    identifier: buildIdentifier(sourceSystem, "Condition", data.id || data.sourceId),
     clinicalStatus: data.clinicalStatus
       ? {
           coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: data.clinicalStatus }],

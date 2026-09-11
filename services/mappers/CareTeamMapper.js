@@ -15,6 +15,26 @@ async function mapCareTeam(data, sourceSystem, orgId, tenantId, db) {
       data.period_start || data.period_end
         ? { start: data.period_start || undefined, end: data.period_end || undefined }
         : undefined,
+    participant: [
+      {
+        role: [
+          {
+            coding: [
+              {
+                system: "http://snomed.info/sct",
+                version: "http://snomed.info/sct/731000124108",
+                code: data.role_code,
+                display: data.role_display_name
+              }
+            ]
+          }
+        ],
+        member: {
+          reference: data.member_reference_id,//this will be patient or practitioner or nurse user
+          display: data.member_display_name
+        }
+      }
+    ]
   };
 }
 
