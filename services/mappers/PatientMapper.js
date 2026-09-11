@@ -1,4 +1,4 @@
-const { buildIdentifier, buildMetaProfile, buildReference } = require("../../utils/fhirHelpers");
+const { buildIdentifier, buildReference, buildAddress, buildTelecom } = require("../../utils/fhirHelpers");
 const { resolveFhirId } = require("./resolver");
 
 async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
@@ -24,14 +24,6 @@ async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
       family: data.previous_name,
     });
   }
-
-  const addressLine = data.address_line1 || data.address;
-  const addressLines = addressLine ? (data.address_line2 ? [addressLine, data.address_line2] : [addressLine]) : undefined;
-
-  let telecom = [];
-  if (data.email) telecom.push({ system: "email", value: data.email, use: data.email_use });
-  if (data.phone) telecom.push({ system: "phone", value: data.phone, use: data.phone_use });
-  if (telecom.length === 0) telecom = undefined;
 
   const extensions = [];
   if (data.race) {
@@ -81,18 +73,17 @@ async function mapPatient(data, sourceSystem, orgId, tenantId, db) {
     active: data.active !== undefined ? data.active : true,
     name: names,
     gender: gender,
-    address: [
-      {
-        use: data.address_use || undefined,
-        line: addressLines,
-        city: data.city || undefined,
-        state: data.state || undefined,
-        postalCode: data.postalCode || undefined,
-        country: data.country || undefined,
-      }
-    ],
+    address: buildAddress(
+      data.address_line1 || data.address,
+      data.address_line2,
+      data.city,
+      data.state,
+      data.postalCode,
+      data.country,
+      data.address_use
+    ),
     birthDate: data.dob ? new Date(data.dob).toISOString().split("T")[0] : undefined,
-    telecom: telecom,
+    telecom: buildTelecom(data.email, data.email_use, data.phone, data.phone_use),
     deceasedBoolean: data.deceasedBoolean !== undefined ? data.deceasedBoolean : undefined,
     deceasedDateTime: data.deceasedDateTime !== undefined ? data.deceasedDateTime : undefined,
     multipleBirthInteger:

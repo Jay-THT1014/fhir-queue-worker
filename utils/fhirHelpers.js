@@ -32,21 +32,30 @@ function buildName(firstName, lastName) {
   ];
 }
 
-function buildAddress(line, city, state, postalCode, use) {
-  if (!line && !city && !state && !postalCode) return undefined;
+function buildAddress(line1, line2, city, state, postalCode, country, use) {
+  if (!line1 && !line2 && !city && !state && !postalCode && !country) return undefined;
+  
+  let addressLines = [];
+  if (line1) addressLines.push(line1);
+  if (line2) addressLines.push(line2);
+  
   return [
     {
       use: use || undefined,
-      line: line ? [line] : undefined,
+      line: addressLines.length > 0 ? addressLines : undefined,
       city: city || undefined,
       state: state || undefined,
       postalCode: postalCode || undefined,
+      country: country || undefined,
     },
   ];
 }
 
-function buildTelecom(email) {
-  return email ? [{ system: "email", value: email }] : undefined;
+function buildTelecom(email, emailUse, phone, phoneUse) {
+  let telecom = [];
+  if (email) telecom.push({ system: "email", value: email, use: emailUse || undefined });
+  if (phone) telecom.push({ system: "phone", value: phone, use: phoneUse || undefined });
+  return telecom.length > 0 ? telecom : undefined;
 }
 
 module.exports = {
